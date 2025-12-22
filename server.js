@@ -56,7 +56,7 @@ app.post("/api/generate", upload.single("photo"), async (req, res) => {
       headers: {
         "Authorization": `Bearer ${token}`,
         "Content-Type": "application/json",
-        "Prefer": "wait=120"
+        "Prefer": "wait=60"
       },
       body: JSON.stringify({
         model: "stability-ai/sdxl",
