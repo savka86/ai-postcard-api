@@ -65,9 +65,31 @@ const completion = await client.chat.completions.create({
 
 const text = completion.choices?.[0]?.message?.content || "Нет ответа";
 
+const svg = `
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1536" viewBox="0 0 1024 1536">
+  <rect width="1024" height="1536" fill="#f7efe0"/>
+  <rect x="60" y="60" width="904" height="1416" rx="40" fill="#fff8ea" stroke="#b12a2a" stroke-width="12"/>
+  <text x="512" y="180" text-anchor="middle" font-size="64" font-family="Arial" font-weight="bold" fill="#b12a2a">
+    ИИ-открытка
+  </text>
+  <text x="512" y="300" text-anchor="middle" font-size="34" font-family="Arial" fill="#333">
+    Промт создан бесплатно
+  </text>
+  <foreignObject x="120" y="380" width="784" height="900">
+    <div xmlns="http://www.w3.org/1999/xhtml" style="font-family: Arial; font-size: 34px; line-height: 1.4; color: #222; text-align: center;">
+      ${text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")}
+    </div>
+  </foreignObject>
+</svg>
+`;
+
+const imageBase64 = Buffer.from(svg, "utf-8").toString("base64");
+
 return res.status(200).json({
   success: true,
-  result: text
+  imageUrl: `data:image/svg+xml;base64,${imageBase64}`,
+  imageBase64,
+  prompt: text
 });
   } catch (e) {
     return res.status(500).send(String(e?.message || e));
