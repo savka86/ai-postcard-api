@@ -19,7 +19,10 @@ const upload = multer({
   limits: { fileSize: 10 * 1024 * 1024 } // 10MB
 });
 
-const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const client = new OpenAI({
+  apiKey: process.env.OPENROUTER_API_KEY,
+  baseURL: "https://openrouter.ai/api/v1"
+});
 
 app.get("/", (req, res) => {
   res.status(200).send("OK. Use POST /api/generate");
@@ -27,8 +30,9 @@ app.get("/", (req, res) => {
 
 app.post("/api/generate", upload.single("photo"), async (req, res) => {
   try {
-    if (!process.env.OPENAI_API_KEY) return res.status(500).send("Missing OPENAI_API_KEY");
-
+   if (!process.env.OPENROUTER_API_KEY) {
+  return res.status(500).send("Missing OPENROUTER_API_KEY");
+}
     const prompt = (req.body.prompt || "").toString().trim();
     if (!prompt) return res.status(400).send("No prompt (field: prompt)");
     if (!req.file) return res.status(400).send("No photo uploaded (field: photo)");
@@ -45,25 +49,26 @@ app.post("/api/generate", upload.single("photo"), async (req, res) => {
       { type: req.file.mimetype || "image/png" }
     );
 
-    const rsp = await client.images.edit({
-      model: "gpt-image-1",
-      image: imageFile,
-      prompt,
-      size,
-      // Helps preserve facial features from the input image (supported for gpt-image-1)
-      input_fidelity: "high",
-      // Optional:
-      // quality: "high",
-      // output_format: "png",
-    });
+const completion = await client.chat.completions.create({
+  model: process.env.OPENROUTER_MODEL || "openrouter/free",
+  messages: [
+    {
+      role: "system",
+      content: "Ты помощник для создания красивых промтов для ИИ-открыток."
+    },
+    {
+      role: "user",
+      content: prompt
+    }
+  ]
+});
 
-    const b64 = rsp.data?.[0]?.b64_json;
-    if (!b64) return res.status(500).send("No image returned from OpenAI");
+const text = completion.choices?.[0]?.message?.content || "Нет ответа";
 
-    const buffer = Buffer.from(b64, "base64");
-    res.setHeader("Content-Type", "image/png");
-    res.setHeader("Cache-Control", "no-store");
-    return res.status(200).send(buffer);
+return res.status(200).json({
+  success: true,
+  result: text
+});
   } catch (e) {
     return res.status(500).send(String(e?.message || e));
   }
